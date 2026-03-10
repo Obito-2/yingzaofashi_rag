@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>营造法式问答助手 · 移动端原型</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <style>
+    /* ========== 全局与配色设计 ==========
+       设计说明：
+       - 主色：柔和米白背景 #f7f3ea，营造类似宣纸的感觉
+       - 字色：墨色 #262626，辅色：中性色线条 #e2d5c3
+       - 点缀色：深茶色 #8c5a2f 用于按钮与高亮，体现传统木建筑气质
+       - 字体：系统无衬线为主，辅以仿宋风格感（通过字重与颜色营造）
+    ==================================== */
+    :root {
+      --bg-paper: #f7f3ea;
+      --bg-panel: #fcfaf5;
+      --border-soft: #e2d5c3;
+      --ink: #262626;
+      --ink-fade: #8a8175;
+      --accent: #8c5a2f;
+      --accent-soft: #c89a68;
+      --danger: #b6423c;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at top, #faf4e8 0, #f3ede0 55%, #eee3d3 100%);
+      color: var(--ink);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 主容器：模拟手机视窗，用于居中展示 */
+    .app-shell {
+      max-width: 480px;
+      height: 100vh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px 16px;
+    }
+
+    /* 顶部品牌区 */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px 6px;
+      margin-bottom: 8px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background:
+        linear-gradient(135deg, #c78f52, #8c5a2f);
+      position: relative;
+      box-shadow: 0 6px 16px rgba(140, 90, 47, 0.45);
+    }
+
+    /* 品牌小图形：抽象斗拱/屋檐轮廓 */
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      left: 18%;
+      right: 18%;
+      border-radius: 999px;
+    }
+
+    .brand-mark::before {
+      top: 26%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .brand-mark::after {
+      top: 44%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .brand-text-main {
+      font-size: 16px;
+      letter-spacing: 0.18em;
+      font-weight: 600;
+    }
+
+    .brand-text-sub {
+      font-size: 11px;
+      color: var(--ink-fade);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--ink-fade);
+    }
+
+    .header-chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(140, 90, 47, 0.22);
+      background: rgba(252, 250, 245, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .header-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f6eedf, #e1d2bf);
+      border: 1px solid #e4d7c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--ink-fade);
+    }
+
+    /* 主卡片区域：包含提示语 + 聊天 + 底部输入 */
+    .main-card {
+      flex: 1;
+      background: radial-gradient(circle at top, #fcfaf5 0, #f6f0e5 65%, #f0e4d4 100%);
+      border-radius: 24px;
+      padding: 12px 12px 10px;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(222, 203, 176, 0.7);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 背景纹理：淡淡的“纸纹格线” */
+    .main-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to bottom, rgba(210, 191, 165, 0.09) 1px, transparent 1px),
+        linear-gradient(to right, rgba(210, 191, 165, 0.04) 1px, transparent 1px);
+      background-size: 100% 32px, 26px 100%;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+
+    .main-card-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* 顶部提示区域 */
+    .hero-intro {
+      padding: 4px 2px 6px;
+      margin-bottom: 4px;
+    }
+
+    .hero-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      margin-bottom: 2px;
+    }
+
+    .hero-desc {
+      font-size: 11px;
+      color: var(--ink-fade);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-tags {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .tag-pill {
+      font-size: 10px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(206, 187, 162, 0.9);
+      background: rgba(252, 249, 242, 0.85);
+      color: #6d6257;
+      white-space: nowrap;
+    }
+
+    .tag-pill-strong {
+      border-color: rgba(140, 90, 47, 0.85);
+      color: var(--accent);
+      background: rgba(252, 245, 237, 0.95);
+    }
+
+    /* 聊天记录区域 */
+    .chat-scroll {
+      flex: 1;
+      margin: 4px -2px 6px;
+      padding: 0 2px 2px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .chat-day-label {
+      text-align: center;
+      margin: 6px 0;
+      font-size: 10px;
+      color: var(--ink-fade);
+      position: relative;
+    }
+
+    .chat-day-label::before,
+    .chat-day-label::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 25%;
+      height: 1px;
+      background: linear-gradient(to right, rgba(195, 176, 150, 0.1), rgba(176, 154, 124, 0.45));
+    }
+
+    .chat-day-label::before {
+      left: 6%;
+    }
+
+    .chat-day-label::after {
+      right: 6%;
+      transform: scaleX(-1);
+    }
+
+    .bubble-row {
+      display: flex;
+      margin-bottom: 8px;
+      padding: 0 3px;
+    }
+
+    .bubble-row.me {
+      justify-content: flex-end;
+    }
+
+    .bubble-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f3e7d5, #e0ceb5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--ink-fade);
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .bubble-avatar.assistant {
+      background: linear-gradient(135deg, #cfa674, #8c5a2f);
+      color: #fffaf3;
+      box-shadow: 0 4px 10px rgba(140, 90, 47, 0.45);
+    }
+
+    .bubble {
+      max-width: 76%;
+      padding: 8px 10px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      position: relative;
+      backdrop-filter: blur(6px);
+    }
+
+    .bubble.assistant {
+      background: rgba(252, 249, 242, 0.98);
+      border: 1px solid rgba(210, 191, 165, 0.9);
+      border-bottom-left-radius: 2px;
+    }
+
+    .bubble.me {
+      background: linear-gradient(135deg, #cfa674, #8c5a2f);
+      color: #fffaf4;
+      border-bottom-right-radius: 2px;
+      box-shadow: 0 6px 12px rgba(140, 90, 47, 0.4);
+    }
+
+    .bubble-meta {
+      font-size: 10px;
+      color: var(--ink-fade);
+      margin-top: 3px;
+    }
+
+    .bubble-me-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .bubble-suggestion-row {
+      margin: 6px 3px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .suggest-chip {
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(201, 182, 157, 0.9);
+      background: rgba(252, 249, 242, 0.9);
+      color: #6b5f54;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .suggest-chip span.icon {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* 底部输入栏 */
+    .composer {
+      border-radius: 999px;
+      background: rgba(252, 249, 242, 0.96);
+      border: 1px solid rgba(208, 191, 166, 0.9);
+      padding: 6px 7px 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 10px 26px rgba(145, 112, 73, 0.18);
+    }
+
+    .composer-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .input-shell {
+      flex: 1;
+      position: relative;
+    }
+
+    .input-field {
+      width: 100%;
+      border: none;
+      outline: none;
+      padding: 4px 0;
+      background: transparent;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .input-field::placeholder {
+      color: rgba(138, 129, 117, 0.8);
+    }
+
+    .input-underline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 1px;
+      background: linear-gradient(to right, rgba(152, 131, 110, 0.3), rgba(140, 90, 47, 0.9));
+      opacity: 0.7;
+    }
+
+    .voice-toggle {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid rgba(167, 139, 105, 0.9);
+      background: radial-gradient(circle at 30% 10%, #fdf6eb, #e8cfaa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 15px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .voice-toggle.active {
+      background: radial-gradient(circle at 30% 10%, #ffe9d7, #d48954);
+      color: #fff9f1;
+      box-shadow: 0 0 0 1px rgba(214, 143, 83, 0.55);
+    }
+
+    .voice-tooltip {
+      position: absolute;
+      top: -26px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fffaf2;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10px;
+      color: #7a6855;
+      border: 1px solid rgba(205, 183, 153, 0.9);
+      white-space: nowrap;
+    }
+
+    .send-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #cda16c, #8c5a2f);
+      box-shadow: 0 8px 18px rgba(140, 90, 47, 0.55);
+      color: #fffaf1;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .send-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 4px 12px rgba(140, 90, 47, 0.6);
+    }
+
+    .composer-hint {
+      font-size: 9px;
+      color: var(--ink-fade);
+      margin-top: 3px;
+      padding-left: 4px;
+    }
+
+    /* 底部说明条：用于标注设计信息 */
+    .footer-meta {
+      margin-top: 4px;
+      font-size: 9px;
+      color: #85786a;
+      text-align: right;
+      opacity: 0.9;
+    }
+
+    /* 历史记录抽屉（右侧滑出） */
+    .history-toggle-btn {
+      position: absolute;
+      top: 72px;
+      right: 8px;
+      z-index: 2;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(184, 156, 120, 0.9);
+      background: rgba(252, 249, 242, 0.96);
+      color: #6b5e52;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .history-panel {
+      position: absolute;
+      top: 58px;
+      right: 10px;
+      bottom: 60px;
+      width: 62%;
+      max-width: 260px;
+      background: rgba(252, 249, 242, 0.98);
+      border-radius: 16px;
+      border: 1px solid rgba(208, 191, 166, 0.95);
+      box-shadow: 0 18px 36px rgba(100, 76, 46, 0.35);
+      padding: 10px 10px 8px;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(110%);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.22s ease-out, opacity 0.18s ease-out;
+      z-index: 3;
+    }
+
+    .history-panel.open {
+      transform: translateX(0%);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .history-title {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: #5d4e3f;
+    }
+
+    .history-sub {
+      font-size: 10px;
+      color: #9a8d7f;
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-top: 2px;
+    }
+
+    .history-item {
+      padding: 7px 7px;
+      border-radius: 11px;
+      border: 1px solid rgba(211, 191, 166, 0.9);
+      background: rgba(252, 249, 243, 0.98);
+      margin-bottom: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .history-item.active {
+      border-color: rgba(140, 90, 47, 0.95);
+      background: linear-gradient(135deg, #f6e7d2, #f1dcc0);
+      box-shadow: 0 6px 14px rgba(140, 90, 47, 0.25);
+    }
+
+    .history-item-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .history-item-meta {
+      font-size: 10px;
+      color: #9a8d7f;
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .history-design-note {
+      font-size: 9px;
+      color: #a0917f;
+      margin-top: 2px;
+    }
+
+    .history-close {
+      font-size: 11px;
+      color: #8a7a66;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(206, 187, 162, 0.95);
+      background: rgba(252, 249, 242, 0.9);
+    }
+
+    /* 登录 / 注册弹窗 */
+    .auth-mask {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.55));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .auth-dialog {
+      width: 92%;
+      max-width: 380px;
+      background: radial-gradient(circle at top, #fcfaf5 0, #f3e8d9 60%, #e6d5c0 100%);
+      border-radius: 22px;
+      border: 1px solid rgba(209, 189, 160, 0.95);
+      box-shadow: 0 26px 60px rgba(40, 20, 0, 0.6);
+      padding: 16px 16px 14px;
+      position: relative;
+    }
+
+    .auth-badge {
+      position: absolute;
+      top: -14px;
+      left: 18px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #2b2927;
+      color: #f8f2e8;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .auth-headline {
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
+    .auth-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+    }
+
+    .auth-subtitle {
+      font-size: 11px;
+      color: #6f6358;
+      margin-top: 4px;
+    }
+
+    .auth-tabs {
+      display: inline-flex;
+      border-radius: 999px;
+      border: 1px solid rgba(203, 182, 155, 0.95);
+      padding: 2px;
+      margin: 8px 0 10px;
+      background: rgba(251, 246, 239, 0.98);
+    }
+
+    .auth-tab {
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #7d6b5a;
+    }
+
+    .auth-tab.active {
+      background: linear-gradient(135deg, #cfa674, #8c5a2f);
+      color: #fffaf1;
+      box-shadow: 0 8px 16px rgba(140, 90, 47, 0.35);
+    }
+
+    .auth-form {
+      margin-top: 4px;
+    }
+
+    .field-group {
+      margin-bottom: 10px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      color: #7c6b5a;
+      margin-bottom: 3px;
+    }
+
+    .field-input-shell {
+      border-radius: 12px;
+      border: 1px solid rgba(204, 183, 155, 0.95);
+      background: rgba(252, 249, 243, 0.98);
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field-prefix {
+      font-size: 11px;
+      color: #a0917f;
+    }
+
+    .field-input {
+      border: none;
+      outline: none;
+      background: transparent;
+      flex: 1;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .field-input::placeholder {
+      color: #b4a594;
+    }
+
+    .field-note {
+      font-size: 10px;
+      color: #a0917f;
+      margin-top: 2px;
+    }
+
+    .auth-bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 10px;
+      color: #8b7a68;
+    }
+
+    .auth-btn {
+      padding: 7px 16px;
+      border-radius: 999px;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #cda16c, #8c5a2f);
+      color: #fffaf1;
+      font-size: 13px;
+      box-shadow: 0 10px 22px rgba(140, 90, 47, 0.55);
+    }
+
+    .auth-secondary {
+      font-size: 10px;
+    }
+
+    .auth-close {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      font-size: 12px;
+      color: #918171;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(251, 246, 239, 0.95);
+    }
+
+    .auth-design-note {
+      margin-top: 6px;
+      font-size: 9px;
+      color: #8a7a68;
+    }
+
+    /* 轻量反馈提示 */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(100%);
+      background: rgba(43, 41, 39, 0.94);
+      color: #f7f0e4;
+      font-size: 11px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.22s ease-out, opacity 0.18s ease-out;
+      z-index: 30;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0%);
+      opacity: 1;
+    }
+
+    /* 滚动条细节（移动端大多不显示，可作为桌面调试用） */
+    ::-webkit-scrollbar {
+      width: 3px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(155, 140, 115, 0.6);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- 顶部品牌与全局入口（设计说明：头部极简，突出“营造法式问答助手”的品牌感） -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-text-main">营造法式</div>
+          <div class="brand-text-sub">传统木构 · 深度问答助手</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="header-chip" id="loginEntry">
+          <span>登录 / 注册</span>
+        </div>
+        <div class="header-avatar">
+          游客
+        </div>
+      </div>
+    </header>
+
+    <!-- 主交互卡片 -->
+    <main class="main-card">
+      <div class="main-card-inner">
+        <!-- 历史记录抽屉入口按钮（设计说明：悬浮在右侧，方便单手点击） -->
+        <button class="history-toggle-btn" id="historyToggle">
+          <span>对话记录</span>
+          <span>▤</span>
+        </button>
+
+        <!-- 顶部引导区域：说明助手定位与功能示例 -->
+        <section class="hero-intro">
+          <div class="hero-title">深度营造研究助手</div>
+          <div class="hero-desc">
+            <span>围绕营造法式、斗拱、榫卯的结构细节进行问答</span>
+            <span style="font-size:10px;color:#a0917f;">设计说明：顶部用于建立产品心智 & 使用场景</span>
+          </div>
+          <div class="hero-tags">
+            <div class="tag-pill tag-pill-strong">📚 依据古籍语境解读</div>
+            <div class="tag-pill">📐 传统木构构造理解</div>
+            <div class="tag-pill">🧱 榫卯节点分析</div>
+            <div class="tag-pill">🧭 适合论文 / 方案初稿</div>
+          </div>
+        </section>
+
+        <!-- 聊天记录滚动区域 -->
+        <section class="chat-scroll" id="chatScroll">
+          <div class="chat-day-label">今天 · 初次对话示例</div>
+
+          <div class="bubble-row">
+            <div class="bubble-avatar assistant">法</div>
+            <div class="bubble assistant">
+              你好，我是「营造法式问答助手」。你可以向我提问关于宋代营造制度、斗拱等级、榫卯构造、梁架做法等问题。<br><br>
+              例如：<br>
+              · 想理解某一等级斗拱在平立剖中的具体表现<br>
+              · 为论文梳理某一卷《营造法式》的关键条文<br>
+              · 对比现代钢结构与传统木构在受力路径上的差异
+              <div class="bubble-meta">系统提示 · 营造研究向的新手引导</div>
+            </div>
+          </div>
+
+          <div class="bubble-row me">
+            <div class="bubble-me-wrapper">
+              <div class="bubble me">
+                「五铺作双下昂」这种斗拱在立面上一般会呈现怎样的节奏？如果我要画分析图，应该重点标出哪些构件？
+              </div>
+              <div class="bubble-meta">你 · 示例提问</div>
+            </div>
+          </div>
+
+          <div class="bubble-row">
+            <div class="bubble-avatar assistant">法</div>
+            <div class="bubble assistant">
+              简单理解，可以从三个层次来画分析图：<br><br>
+              ① <strong>纵向节奏</strong>：从柱头铺作开始，依次向外叠出 5 铺作，每一跳的出跳与高度关系，可用折线标注“出跳—抬升”节奏；<br>
+              ② <strong>构件层级</strong>：柱头铺作、补间铺作、昂、拱、昂嘴等，可采用不同线型或明度区分主次；<br>
+              ③ <strong>受力路径</strong>：从屋顶荷载 → 檩 → 椽 → 斗拱 → 柱，可用淡色箭头串联，体现“由外向内、由上而下”的传力；<br><br>
+              你可以把原始立面图去色，仅保留细线轮廓，在其上覆盖结构分析层。
+              <div class="bubble-meta">营造法式助手 · 结构分析向回答</div>
+            </div>
+          </div>
+
+          <!-- 快捷提问建议：点击后会填充到输入框 -->
+          <div class="bubble-suggestion-row" id="suggestRow">
+            <div class="suggest-chip" data-question="请帮我梳理《营造法式》中与五铺作斗拱相关的条文，并给出结构要点。">
+              <span class="icon">●</span>
+              <span>梳理五铺作相关条文</span>
+            </div>
+            <div class="suggest-chip" data-question="如何向非专业读者解释榫卯节点的受力特点？请给我一个适合展板的文字。">
+              <span class="icon">●</span>
+              <span>讲给非专业读者听</span>
+            </div>
+            <div class="suggest-chip" data-question="我想写一小节“斗拱在当代木结构中的启发”，可以给一个提纲吗？">
+              <span class="icon">●</span>
+              <span>论文小节提纲</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 底部输入区（文本 + 语音） -->
+        <section>
+          <div class="composer" id="composer">
+            <div class="composer-left">
+              <div class="input-shell">
+                <input
+                  id="textInput"
+                  class="input-field"
+                  type="text"
+                  placeholder="输入问题，如：帮我比较一下宋式与明式斗拱在比例上的差异"
+                />
+                <div class="input-underline"></div>
+              </div>
+              <button class="voice-toggle" id="voiceToggle" type="button">
+                <span id="voiceIcon">🎙</span>
+                <div class="voice-tooltip" id="voiceTooltip" style="display:none;">
+                  按住说话 · 语音占位交互
+                </div>
+              </button>
+            </div>
+            <button class="send-btn" id="sendBtn" type="button">➤</button>
+          </div>
+          <div class="composer-hint">
+            设计说明：下方区域统一承载「文本输入 + 语音按钮 + 发送」，适配单手拇指操作，语音录制此处为占位交互，后续可接第三方 SDK。
+          </div>
+          <div class="footer-meta">
+            原型说明：本页面仅为 UI & 交互原型，实际模型调用与语音识别可在开发阶段接入。
+          </div>
+        </section>
+      </div>
+
+      <!-- 历史对话记录抽屉（右侧滑出） -->
+      <aside class="history-panel" id="historyPanel">
+        <div class="history-header">
+          <div>
+            <div class="history-title">对话记录</div>
+            <div class="history-sub">设计说明：按时间平铺展示，点击可切换会话</div>
+          </div>
+          <button class="history-close" id="historyClose">收起</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <div class="history-item active" data-session-id="s1">
+            <div class="history-item-title">五铺作斗拱分析</div>
+            <div class="history-item-meta">
+              <span>今天 · 08:21</span>
+              <span>7 轮对话</span>
+            </div>
+            <div class="history-design-note">
+              设计说明：当前会话高亮，点击其他条目可模拟切换不同研究任务。
+            </div>
+          </div>
+          <div class="history-item" data-session-id="s2">
+            <div class="history-item-title">榫卯节点受力讲解</div>
+            <div class="history-item-meta">
+              <span>昨天</span>
+              <span>5 轮</span>
+            </div>
+          </div>
+          <div class="history-item" data-session-id="s3">
+            <div class="history-item-title">《营造法式》卷一概览</div>
+            <div class="history-item-meta">
+              <span>本周一</span>
+              <span>9 轮</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- 登录 / 注册弹窗（默认展示，可模拟流程） -->
+  <div class="auth-mask" id="authMask">
+    <div class="auth-dialog">
+      <div class="auth-badge">SIGN IN · 注册入口</div>
+      <button class="auth-close" id="authClose">暂不登录</button>
+      <div class="auth-headline">
+        <div class="auth-title" id="authTitle">欢迎来到营造法式问答助手</div>
+        <div class="auth-subtitle" id="authSubtitle">
+          使用手机号 / 邮箱 / 自定义用户名 + 密码登录，方便你跨设备同步传统木建筑研究对话记录。
+        </div>
+      </div>
+
+      <!-- 登录 / 注册 Tab 切换 -->
+      <div class="auth-tabs">
+        <div class="auth-tab active" data-mode="login" id="tabLogin">登录</div>
+        <div class="auth-tab" data-mode="register" id="tabRegister">注册</div>
+      </div>
+
+      <!-- 表单区域（账号 + 密码） -->
+      <div class="auth-form">
+        <div class="field-group">
+          <div class="field-label">账号</div>
+          <div class="field-input-shell">
+            <div class="field-prefix">ID</div>
+            <input
+              id="authAccount"
+              class="field-input"
+              type="text"
+              placeholder="手机号 / 邮箱 / 自定义用户名"
+            />
+          </div>
+          <div class="field-note">
+            设计说明：账号字段支持三种常见方式，避免复杂认证，仅保留与研究相关的必要信息。
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">密码</div>
+          <div class="field-input-shell">
+            <div class="field-prefix">●●●</div>
+            <input
+              id="authPassword"
+              class="field-input"
+              type="password"
+              placeholder="设置一个易记但安全的密码"
+            />
+          </div>
+          <div class="field-note">
+            密码不做额外复杂校验，主要用于区分不同研究者，适合研究生个人项目场景。
+          </div>
+        </div>
+
+        <div class="auth-bottom-row">
+          <div class="auth-secondary">
+            游客模式下也可以体验提问，但历史记录仅保留在本地设备。
+          </div>
+          <button class="auth-btn" id="authSubmit">登录</button>
+        </div>
+
+        <div class="auth-design-note">
+          设计说明：<br>
+          · 登录 / 注册流程保持单屏完成，降低操作成本；<br>
+          · 不额外提供“忘记密码”等复杂功能，以研究者个人使用为主；<br>
+          · 登陆后可以在右上角替换为个性化昵称 / 头像。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== 工具函数 ==========
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2000);
+    }
+
+    // ========== 登录 / 注册交互 ==========
+    (function setupAuth() {
+      const authMask = document.getElementById("authMask");
+      const authClose = document.getElementById("authClose");
+      const loginEntry = document.getElementById("loginEntry");
+      const tabLogin = document.getElementById("tabLogin");
+      const tabRegister = document.getElementById("tabRegister");
+      const authTitle = document.getElementById("authTitle");
+      const authSubtitle = document.getElementById("authSubtitle");
+      const authSubmit = document.getElementById("authSubmit");
+      const authAccount = document.getElementById("authAccount");
+      const authPassword = document.getElementById("authPassword");
+
+      let mode = "login";
+
+      function updateMode(newMode) {
+        mode = newMode;
+        tabLogin.classList.toggle("active", mode === "login");
+        tabRegister.classList.toggle("active", mode === "register");
+        if (mode === "login") {
+          authTitle.textContent = "欢迎回来，继续你的营造研究";
+          authSubtitle.textContent =
+            "登录后可在任意设备上同步你关于斗拱、榫卯与结构分析的问答记录。";
+          authSubmit.textContent = "登录";
+        } else {
+          authTitle.textContent = "注册你的营造研究空间";
+          authSubtitle.textContent =
+            "首次使用时仅需设置账号和密码，后续可以随时回到这里继续你的传统木建筑研究。";
+          authSubmit.textContent = "注册并登录";
+        }
+      }
+
+      tabLogin.addEventListener("click", () => updateMode("login"));
+      tabRegister.addEventListener("click", () => updateMode("register"));
+
+      authSubmit.addEventListener("click", () => {
+        const acc = authAccount.value.trim();
+        const pwd = authPassword.value.trim();
+        if (!acc || !pwd) {
+          showToast("请填写账号和密码");
+          return;
+        }
+        // 这里仅做原型交互，实际开发可接入后端
+        showToast(mode === "login" ? "登录成功（原型交互）" : "注册成功，已登录（原型交互）");
+        authMask.style.display = "none";
+        // 头像区域展示简短昵称
+        const avatar = document.querySelector(".header-avatar");
+        avatar.textContent = acc.slice(0, 4) || "用户";
+      });
+
+      authClose.addEventListener("click", () => {
+        authMask.style.display = "none";
+        showToast("已进入游客模式");
+      });
+
+      loginEntry.addEventListener("click", () => {
+        authMask.style.display = "flex";
+      });
+    })();
+
+    // ========== 历史记录抽屉交互 ==========
+    (function setupHistoryPanel() {
+      const toggle = document.getElementById("historyToggle");
+      const panel = document.getElementById("historyPanel");
+      const close = document.getElementById("historyClose");
+      const list = document.getElementById("historyList");
+      const chatScroll = document.getElementById("chatScroll");
+
+      toggle.addEventListener("click", () => {
+        panel.classList.add("open");
+      });
+
+      close.addEventListener("click", () => {
+        panel.classList.remove("open");
+      });
+
+      list.addEventListener("click", (e) => {
+        const item = e.target.closest(".history-item");
+        if (!item) return;
+        list.querySelectorAll(".history-item").forEach((el) => el.classList.remove("active"));
+        item.classList.add("active");
+        // 原型逻辑：切换会话时，将聊天滚动到顶部，并给出提示
+        chatScroll.scrollTo({ top: 0, behavior: "smooth" });
+        const title = item.querySelector(".history-item-title").textContent.trim();
+        showToast("已切换到会话：「" + title + "」（原型交互）");
+      });
+    })();
+
+    // ========== 底部输入 + 语音交互 ==========
+    (function setupComposer() {
+      const voiceToggle = document.getElementById("voiceToggle");
+      const voiceTooltip = document.getElementById("voiceTooltip");
+      const textInput = document.getElementById("textInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const chatScroll = document.getElementById("chatScroll");
+      const suggestRow = document.getElementById("suggestRow");
+
+      let voiceActive = false;
+
+      voiceToggle.addEventListener("click", () => {
+        voiceActive = !voiceActive;
+        voiceToggle.classList.toggle("active", voiceActive);
+        voiceTooltip.style.display = voiceActive ? "block" : "none";
+        showToast(
+          voiceActive
+            ? "语音输入占位交互：实际项目中可接入录音与识别"
+            : "已退出语音输入模式"
+        );
+      });
+
+      function appendMessage(content, fromMe = true) {
+        const row = document.createElement("div");
+        row.className = "bubble-row" + (fromMe ? " me" : "");
+
+        if (!fromMe) {
+          const avatar = document.createElement("div");
+          avatar.className = "bubble-avatar assistant";
+          avatar.textContent = "法";
+          row.appendChild(avatar);
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = fromMe ? "bubble-me-wrapper" : "";
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble " + (fromMe ? "me" : "assistant");
+        bubble.textContent = content;
+
+        const meta = document.createElement("div");
+        meta.className = "bubble-meta";
+        meta.textContent = fromMe ? "你 · 新发送的问题" : "营造法式助手 · 原型自动回复";
+
+        wrapper.appendChild(bubble);
+        wrapper.appendChild(meta);
+        row.appendChild(wrapper);
+        chatScroll.appendChild(row);
+        chatScroll.scrollTo({ top: chatScroll.scrollHeight, behavior: "smooth" });
+      }
+
+      function handleSend() {
+        const text = textInput.value.trim();
+        if (!text) {
+          showToast("请先输入要提问的内容");
+          return;
+        }
+        appendMessage(text, true);
+        textInput.value = "";
+        // 原型中的自动回复
+        setTimeout(() => {
+          appendMessage(
+            "收到你的问题。实际项目中这里将调用大模型，对「营造法式 / 传统木构」语料进行检索与推理后再作答。"
+          );
+        }, 600);
+      }
+
+      sendBtn.addEventListener("click", handleSend);
+
+      textInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSend();
+        }
+      });
+
+      // 快捷提问 chips 交互
+      suggestRow.addEventListener("click", (e) => {
+        const chip = e.target.closest(".suggest-chip");
+        if (!chip) return;
+        const q = chip.getAttribute("data-question");
+        textInput.value = q;
+        textInput.focus();
+        showToast("已填入示例问题，可直接发送");
+      });
+    })();
+  </script>
+</body>
+</html>
+

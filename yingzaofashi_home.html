@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>营造百科 - 极致极简 v1.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #ffffff;
+            color: #1f1f1f;
+            overflow: hidden;
+        }
+
+        /* 核心渐变色：松石绿 & 浅黄 */
+        .gradient-text {
+            background: linear-gradient(90deg, #50a3a2 0%, #73BA9B 45%, #d4c27b 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        /* 侧边栏：完全隐藏式设计 */
+        .sidebar {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: #f8fafb;
+            width: 0;
+            opacity: 0;
+        }
+
+        .sidebar.expanded {
+            width: 300px;
+            opacity: 1;
+            border-right: 1px solid #f0f0f0;
+        }
+
+        /* 悬浮菜单按钮 */
+        .menu-fab {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            width: 48px;
+            height: 48px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .menu-fab:hover {
+            background-color: #f0f4f9;
+            transform: scale(1.05);
+        }
+
+        /* 增强型输入框 */
+        .input-box-container {
+            background-color: #f1f8f5;
+            /* 浅绿色背景，呼应主题色 */
+            border-radius: 32px;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .input-box-container:focus-within {
+            background-color: #ffffff;
+            box-shadow: 0 8px 24px rgba(115, 186, 155, 0.12);
+            border-color: #73BA9B50;
+        }
+
+        .input-placeholder::placeholder {
+            color: #b0c4bb;
+            /* 极浅的占位文字 */
+            font-weight: 300;
+        }
+
+        /* 示例卡片：半高 & 无背景 */
+        .sample-card {
+            height: 64px;
+            /* 高度减半 */
+            border: 1px solid #e5e7eb;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .sample-card:hover {
+            border-color: #73BA9B;
+            background-color: #f1f8f5;
+        }
+
+        /* 垂直居中布局引擎 */
+        .center-stage {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 移动端设备适配：抽屉式侧边栏 */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                height: 100vh;
+                z-index: 90;
+            }
+
+            .sidebar.expanded {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body class="flex">
+
+    <div onclick="toggleSidebar()" class="menu-fab">
+        <i class="fas fa-bars text-gray-500 text-lg"></i>
+    </div>
+
+    <aside id="sidebar" class="sidebar h-screen flex flex-col z-50 overflow-hidden">
+        <div class="p-8 pt-20">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-lg font-bold text-gray-800">历史对话</h2>
+                <button class="text-[#73BA9B] hover:rotate-90 transition-transform">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 overflow-y-auto no-scrollbar">
+                <div
+                    class="group flex items-center p-3 rounded-xl hover:bg-white hover:shadow-sm cursor-pointer transition-all">
+                    <i class="far fa-clock text-gray-400 text-xs"></i>
+                    <span class="ml-3 text-sm text-gray-600 truncate">《营造法式》材分制深度研究</span>
+                </div>
+                <div
+                    class="group flex items-center p-3 rounded-xl hover:bg-white hover:shadow-sm cursor-pointer transition-all">
+                    <i class="far fa-clock text-gray-400 text-xs"></i>
+                    <span class="ml-3 text-sm text-gray-600 truncate">斗栱组装的三维逻辑模拟</span>
+                </div>
+                <div
+                    class="group flex items-center p-3 rounded-xl hover:bg-white hover:shadow-sm cursor-pointer transition-all">
+                    <i class="far fa-clock text-gray-400 text-xs"></i>
+                    <span class="ml-3 text-sm text-gray-600 truncate">宋代与唐代殿堂构架对比</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-auto p-8 border-t border-gray-100 flex items-center">
+            <div class="w-10 h-10 rounded-full bg-[#73BA9B] flex items-center justify-center text-white font-bold">S
+            </div>
+            <div class="ml-3">
+                <p class="text-sm font-medium text-gray-800">Sun Junqiang</p>
+                <p class="text-xs text-gray-400">Postgraduate</p>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 relative bg-white overflow-y-auto">
+
+        <div class="center-stage px-6">
+
+            <div class="w-full max-w-[800px] flex flex-col space-y-12">
+
+                <div class="text-center">
+                    <h1 class="text-4xl md:text-5xl font-medium tracking-tight leading-tight">
+                        <span class="gradient-text">你好，sun</span><br>
+                        <span class="gradient-text">想要了解哪些传统木建筑营造知识？</span>
+                    </h1>
+                </div>
+
+                <div class="input-box-container p-4">
+                    <div class="flex flex-col h-40"> <textarea id="chat-input" placeholder="描述你想探索的古建筑奥秘..."
+                            class="input-placeholder flex-1 bg-transparent border-none focus:outline-none text-xl text-gray-800 py-2 resize-none leading-relaxed"></textarea>
+
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="flex items-center space-x-2">
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <button class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-microphone text-lg"></i>
+                                </button>
+                                <button
+                                    class="w-12 h-12 flex items-center justify-center bg-[#73BA9B] text-white rounded-full shadow-lg shadow-[#73BA9B30] hover:scale-105 transition-transform">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="sample-card px-5 flex items-center rounded-2xl cursor-pointer group">
+                        <i class="fas fa-chess-rook text-[#73BA9B] opacity-40 mr-4 text-xs group-hover:opacity-100"></i>
+                        <p class="text-[14px] text-gray-500 group-hover:text-gray-800">什么是《营造法式》中的“材分制”？</p>
+                    </div>
+                    <div class="sample-card px-5 flex items-center rounded-2xl cursor-pointer group">
+                        <i class="fas fa-tree text-[#73BA9B] opacity-40 mr-4 text-xs group-hover:opacity-100"></i>
+                        <p class="text-[14px] text-gray-500 group-hover:text-gray-800">分析宋代建筑与唐代建筑的结构差异</p>
+                    </div>
+                    <div class="sample-card px-5 flex items-center rounded-2xl cursor-pointer group">
+                        <i
+                            class="fas fa-puzzle-piece text-[#73BA9B] opacity-40 mr-4 text-xs group-hover:opacity-100"></i>
+                        <p class="text-[14px] text-gray-500 group-hover:text-gray-800">如何通过榫卯结构实现建筑的抗震？</p>
+                    </div>
+                    <div class="sample-card px-5 flex items-center rounded-2xl cursor-pointer group">
+                        <i class="fas fa-feather text-[#73BA9B] opacity-40 mr-4 text-xs group-hover:opacity-100"></i>
+                        <p class="text-[14px] text-gray-500 group-hover:text-gray-800">解释“举折”与“屋面曲线”的关系</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="absolute bottom-6 w-full text-center">
+            <p class="text-[11px] text-gray-300 tracking-widest uppercase">
+                Yingzao Encyclopedia · Knowledge Engine v1.1
+            </p>
+        </div>
+    </main>
+
+    <script>
+        let isSidebarOpen = false;
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const menuFab = document.querySelector('.menu-fab');
+
+            isSidebarOpen = !isSidebarOpen;
+
+            if (isSidebarOpen) {
+                sidebar.classList.add('expanded');
+                if (window.innerWidth <= 768) {
+                    menuFab.style.left = 'calc(100% - 68px)';
+                } else {
+                    menuFab.style.left = '240px'; // 按钮随侧边栏移动，保持可操作
+                }
+                menuFab.innerHTML = '<i class="fas fa-times text-gray-500 text-lg"></i>';
+            } else {
+                sidebar.classList.remove('expanded');
+                menuFab.style.left = '20px';
+                menuFab.innerHTML = '<i class="fas fa-bars text-gray-500 text-lg"></i>';
+            }
+        }
+
+        // 响应式处理
+        window.addEventListener('resize', () => {
+            if (window.innerWidth < 768 && isSidebarOpen) {
+                toggleSidebar();
+            }
+        });
+    </script>
+</body>
+
+</html>
