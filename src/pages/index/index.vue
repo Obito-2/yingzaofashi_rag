@@ -153,12 +153,21 @@ const handleResize = (res) => {
   }
 };
 
+const loadHistory = () => {
+  const data = uni.getStorageSync('chatHistory');
+  if (data && data.length > 0) {
+    historyList.value = data.sort((a,b) => b.timestamp - a.timestamp);
+  }
+};
+
 onMounted(() => {
   windowWidth.value = uni.getSystemInfoSync().windowWidth;
   uni.onWindowResize(handleResize);
+  loadHistory();
 });
 
 onShow(() => {
+  loadHistory();
 });
 
 onUnmounted(() => {
@@ -492,6 +501,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.icon-btn::after, .send-btn::after, .add-btn::after {
+  border: none;
 }
 
 .icon-btn:hover i {

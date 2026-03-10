@@ -100,7 +100,7 @@
               :max-height="120"
               @focus="inputFocused = true"
               @blur="inputFocused = false"
-              @confirm="sendMessage"
+              @confirm="handleSendOrStop"
             ></textarea>
             <view class="input-actions">
               <view></view>
@@ -108,8 +108,8 @@
                 <button class="icon-btn">
                   <i class="fas fa-microphone" style="font-size:20px; color:#9ca3af;"></i>
                 </button>
-                <button class="send-btn" :class="{ active: inputText.trim() }" @click="sendMessage">
-                  <i class="fas fa-paper-plane" style="color:#fff;"></i>
+                <button class="send-btn" :class="{ active: inputText.trim() || isGenerating }" @click="handleSendOrStop">
+                  <i :class="isGenerating ? 'fas fa-stop' : 'fas fa-paper-plane'" style="color:#fff;"></i>
                 </button>
               </view>
             </view>
@@ -149,6 +149,15 @@ const messages = ref([]);
 const inputText = ref('');
 const inputFocused = ref(false);
 const scrollTop = ref(0);
+const isGenerating = ref(false);
+
+const handleSendOrStop = () => {
+  if (isGenerating.value) {
+    isGenerating.value = false;
+  } else {
+    sendMessage();
+  }
+};
 
 const saveHistory = () => {
   historyList.value.sort((a,b) => b.timestamp - a.timestamp);
@@ -195,7 +204,11 @@ const typeWriter = async (msgIndex, fullText, expectedSessionId) => {
   let current = '';
   const session = historyList.value.find(s => s.id === expectedSessionId);
 
+  isGenerating.value = true;
+
   for (let i = 0; i < fullText.length; i++) {
+    if (!isGenerating.value) break;
+
     current += fullText[i];
     
     // Background update
@@ -211,6 +224,8 @@ const typeWriter = async (msgIndex, fullText, expectedSessionId) => {
     await delay(30);
   }
   
+  isGenerating.value = false;
+
   // Finish background
   if (session && session.messages[msgIndex]) {
     session.messages[msgIndex].typing = false;
@@ -231,6 +246,7 @@ const scrollToBottom = () => {
 };
 
 const sendMessage = async () => {
+  if (isGenerating.value) return;
   const text = inputText.value.trim();
   if (!text) return;
 
@@ -257,8 +273,15 @@ const sendMessage = async () => {
   }
   saveHistory();
 
+  isGenerating.value = true;
+
   // 模拟等待，然后添加 AI 消息
-  await new Promise(r => setTimeout(r, 600));
+  for(let w=0; w < 20; w++) {
+    if (!isGenerating.value) break;
+    await new Promise(r => setTimeout(r, 30));
+  }
+  
+  if (!isGenerating.value) return;
   
   const typingSessionId = currentSessionId.value;
 
@@ -278,6 +301,7 @@ const sendMessage = async () => {
 };
 
 const regenerate = async (idx) => {
+  if (isGenerating.value) return;
   messages.value[idx].content = '';
   messages.value[idx].typing = true;
   await typeWriter(idx, MOCK_ANSWER, currentSessionId.value);
@@ -703,6 +727,10 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 4px;
   display: flex; align-items: center; justify-content: center;
+}
+
+.icon-btn::after, .send-btn::after, .action-icon-btn::after, .add-btn::after {
+  border: none;
 }
 
 .send-btn {
