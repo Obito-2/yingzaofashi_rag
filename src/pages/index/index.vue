@@ -29,11 +29,11 @@
         </view>
       </view>
 
-      <view class="sidebar-footer">
-        <view class="avatar">S</view>
+      <view class="sidebar-footer" @click="handleLoginClick" style="cursor: pointer;">
+        <view class="avatar">{{ userInfo?.nickname?.charAt(0)?.toUpperCase() || userInfo?.username?.charAt(0)?.toUpperCase() || '访' }}</view>
         <view class="user-info">
-          <text class="user-name">Sun Junqiang</text>
-          <text class="user-role">Postgraduate</text>
+          <text class="user-name">{{ userInfo?.nickname || userInfo?.username || '未登录' }}</text>
+          <text class="user-role">{{ userInfo ? 'Yingzao User' : '点击登录记录对话' }}</text>
         </view>
       </view>
     </aside>
@@ -111,12 +111,36 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
+import { getSessions } from '@/api/chat';
 
 const isSidebarOpen = ref(false);
 const windowWidth = ref(1024);
 const inputText = ref('');
 const inputFocused = ref(false);
 const historyList = ref([]);
+const userInfo = ref(null);
+
+const loadUserInfo = () => {
+  userInfo.value = uni.getStorageSync('userInfo') || null;
+};
+
+const handleLoginClick = () => {
+  if (!userInfo.value) {
+    uni.navigateTo({ url: '/pages/login/login' });
+  } else {
+    uni.showActionSheet({
+      itemList: ['退出登录'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          uni.removeStorageSync('token');
+          uni.removeStorageSync('userInfo');
+          userInfo.value = null;
+          historyList.value = [];
+        }
+      }
+    });
+  }
+};
 
 const menuFabLeft = computed(() => {
   if (!isSidebarOpen.value) return '20px';
@@ -129,6 +153,7 @@ const toggleSidebar = () => {
 
 const newChat = () => {
   inputText.value = '';
+  isSidebarOpen.value = false;
 };
 
 const goToChat = (sessionId) => {
@@ -138,7 +163,15 @@ const goToChat = (sessionId) => {
 const sendQuery = () => {
   const text = inputText.value.trim();
   if (!text) return;
+  
+  if (!uni.getStorageSync('token')) {
+    uni.setStorageSync('pendingMessage', text);
+    uni.navigateTo({ url: '/pages/login/login' });
+    return;
+  }
+  
   uni.navigateTo({ url: `/pages/chat/chat?query=${encodeURIComponent(text)}` });
+  inputText.value = '';
 };
 
 const fillSample = (text) => {
@@ -153,21 +186,38 @@ const handleResize = (res) => {
   }
 };
 
-const loadHistory = () => {
-  const data = uni.getStorageSync('chatHistory');
-  if (data && data.length > 0) {
-    historyList.value = data.sort((a,b) => b.timestamp - a.timestamp);
+const loadHistory = async () => {
+  try {
+    const res = await getSessions({ page: 1, size: 50 });
+    if (res && res.data) {
+      historyList.value = res.data;
+    }
+  } catch (error) {
+    console.error('获取历史记录失败:', error);
   }
 };
 
 onMounted(() => {
   windowWidth.value = uni.getSystemInfoSync().windowWidth;
   uni.onWindowResize(handleResize);
-  loadHistory();
+  loadUserInfo();
+  if (uni.getStorageSync('token')) {
+    loadHistory();
+  }
 });
 
 onShow(() => {
-  loadHistory();
+  loadUserInfo();
+  if (uni.getStorageSync('token')) {
+    loadHistory();
+    const pendingMessage = uni.getStorageSync('pendingMessage');
+    if (pendingMessage) {
+      uni.removeStorageSync('pendingMessage');
+      uni.navigateTo({ url: `/pages/chat/chat?query=${encodeURIComponent(pendingMessage)}` });
+    }
+  } else {
+    historyList.value = [];
+  }
 });
 
 onUnmounted(() => {

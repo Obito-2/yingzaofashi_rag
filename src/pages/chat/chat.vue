@@ -28,11 +28,11 @@
           </view>
         </view>
       </view>
-      <view class="sidebar-footer">
-        <view class="avatar">S</view>
+      <view class="sidebar-footer" @click="handleLoginClick" style="cursor: pointer;">
+        <view class="avatar">{{ userInfo?.nickname?.charAt(0)?.toUpperCase() || userInfo?.username?.charAt(0)?.toUpperCase() || '访' }}</view>
         <view class="user-info">
-          <text class="user-name">Sun Junqiang</text>
-          <text class="user-role">Postgraduate</text>
+          <text class="user-name">{{ userInfo?.nickname || userInfo?.username || '未登录' }}</text>
+          <text class="user-role">{{ userInfo ? 'Yingzao User' : '点击登录记录对话' }}</text>
         </view>
       </view>
     </aside>
@@ -60,11 +60,21 @@
                 </view>
                 <!-- 操作按钮 -->
                 <view class="ai-actions" v-if="!msg.typing">
-                  <button class="action-icon-btn" title="点赞">
-                    <i class="far fa-thumbs-up"></i>
+                  <button 
+                    class="action-icon-btn" 
+                    :class="{ 'active': msg.feedback === 'like' }" 
+                    title="点赞" 
+                    @click="handleFeedback(msg, 'like')"
+                  >
+                    <i class="far fa-thumbs-up" :class="msg.feedback === 'like' ? 'fas' : 'far'"></i>
                   </button>
-                  <button class="action-icon-btn" title="踩">
-                    <i class="far fa-thumbs-down"></i>
+                  <button 
+                    class="action-icon-btn" 
+                    :class="{ 'active': msg.feedback === 'dislike' }" 
+                    title="踩" 
+                    @click="handleFeedback(msg, 'dislike')"
+                  >
+                    <i class="far fa-thumbs-down" :class="msg.feedback === 'dislike' ? 'fas' : 'far'"></i>
                   </button>
                   <button class="action-icon-btn" title="重新生成" @click="regenerate(idx)">
                     <i class="fas fa-redo-alt"></i>
@@ -127,6 +137,14 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
+import { 
+  getSessions, 
+  getSessionMessages, 
+  streamChatCompletion, 
+  streamRegenerate, 
+  submitFeedback 
+} from '@/api/chat';
 
 /* ---- 侧边栏 ---- */
 const isSidebarOpen = ref(false);
@@ -141,8 +159,6 @@ const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-const MOCK_ANSWER = `根据《营造法式》的记载：\n\n**材分制**是宋代官方建筑规范中关于建筑构件尺...`;
-
 const historyList = ref([]);
 const currentSessionId = ref(null);
 const messages = ref([]);
@@ -150,34 +166,41 @@ const inputText = ref('');
 const inputFocused = ref(false);
 const scrollTop = ref(0);
 const isGenerating = ref(false);
+let currentStreamTask = null; // 用于存放请求实例，支持中止
+const userInfo = ref(null);
 
-const handleSendOrStop = () => {
-  if (isGenerating.value) {
-    isGenerating.value = false;
+const loadUserInfo = () => {
+  userInfo.value = uni.getStorageSync('userInfo') || null;
+};
+
+const handleLoginClick = () => {
+  if (!userInfo.value) {
+    uni.navigateTo({ url: '/pages/login/login' });
   } else {
-    sendMessage();
+    uni.showActionSheet({
+      itemList: ['退出登录'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          uni.removeStorageSync('token');
+          uni.removeStorageSync('userInfo');
+          userInfo.value = null;
+          historyList.value = [];
+          messages.value = [];
+          currentSessionId.value = null;
+        }
+      }
+    });
   }
 };
 
-const saveHistory = () => {
-  historyList.value.sort((a,b) => b.timestamp - a.timestamp);
-  uni.setStorageSync('chatHistory', JSON.parse(JSON.stringify(historyList.value)));
-};
-
-const loadHistory = () => {
-  const data = uni.getStorageSync('chatHistory');
-  if (data && data.length > 0) {
-    historyList.value = data.sort((a,b) => b.timestamp - a.timestamp);
-  } else {
-    historyList.value = [
-      {
-        id: 'mock-1',
-        title: '《营造法式》材分制深度研究',
-        timestamp: Date.now() - 100000,
-        messages: [{ role: 'user', content: '什么是《营造法式》中的「材分制」？' }, { role: 'assistant', content: MOCK_ANSWER }]
-      }
-    ];
-    saveHistory();
+const loadHistory = async () => {
+  try {
+    const res = await getSessions({ page: 1, size: 50 });
+    if (res && res.data) {
+      historyList.value = res.data;
+    }
+  } catch (error) {
+    console.error('获取侧边栏记录失败:', error);
   }
 };
 
@@ -186,56 +209,27 @@ const newChat = () => {
   uni.reLaunch({ url: '/pages/index/index' });
 };
 
-const switchSession = (sessionId) => {
+const switchSession = async (sessionId) => {
   if (currentSessionId.value === sessionId) return;
-  const session = historyList.value.find(s => s.id === sessionId);
-  if (session) {
-    currentSessionId.value = sessionId;
-    messages.value = JSON.parse(JSON.stringify(session.messages));
-    if (windowWidth.value < 768) {
-      isSidebarOpen.value = false;
+  if (isGenerating.value) stopGeneration();
+
+  try {
+    const res = await getSessionMessages(sessionId);
+    if (res && res.data) {
+      currentSessionId.value = sessionId;
+      messages.value = res.data.map(msg => ({
+        ...msg,
+        typing: false
+      }));
+
+      // 如果能在当前列表里找到它，提升或仅高亮
+      if (windowWidth.value < 768) {
+        isSidebarOpen.value = false;
+      }
+      scrollToBottom();
     }
-    scrollToBottom();
-  }
-};
-
-const typeWriter = async (msgIndex, fullText, expectedSessionId) => {
-  const delay = (ms) => new Promise(r => setTimeout(r, ms));
-  let current = '';
-  const session = historyList.value.find(s => s.id === expectedSessionId);
-
-  isGenerating.value = true;
-
-  for (let i = 0; i < fullText.length; i++) {
-    if (!isGenerating.value) break;
-
-    current += fullText[i];
-    
-    // Background update
-    if (session && session.messages[msgIndex]) {
-      session.messages[msgIndex].content = current;
-    }
-
-    // UI update only if active
-    if (currentSessionId.value === expectedSessionId && messages.value[msgIndex]) {
-      messages.value[msgIndex].content = current;
-      if (i % 5 === 0) scrollToBottom();
-    }
-    await delay(30);
-  }
-  
-  isGenerating.value = false;
-
-  // Finish background
-  if (session && session.messages[msgIndex]) {
-    session.messages[msgIndex].typing = false;
-    saveHistory();
-  }
-
-  // Finish UI
-  if (currentSessionId.value === expectedSessionId && messages.value[msgIndex]) {
-    messages.value[msgIndex].typing = false;
-    scrollToBottom();
+  } catch (e) {
+    console.error('获取消息记录失败:', e);
   }
 };
 
@@ -245,66 +239,130 @@ const scrollToBottom = () => {
   });
 };
 
-const sendMessage = async () => {
+const stopGeneration = () => {
+  if (currentStreamTask) {
+    currentStreamTask.abort();
+    currentStreamTask = null;
+  }
+  isGenerating.value = false;
+  const lastMsg = messages.value[messages.value.length - 1];
+  if (lastMsg && lastMsg.typing) {
+    lastMsg.typing = false;
+  }
+};
+
+const handleSendOrStop = () => {
+  if (isGenerating.value) {
+    stopGeneration();
+  } else {
+    sendMessage();
+  }
+};
+
+// 提交点赞踩
+const handleFeedback = async (msg, action) => {
+  if (!msg.id) return; // 如果是本地生成的暂时没有ID的情况
+  try {
+    const targetAction = msg.feedback === action ? 'none' : action; 
+    await submitFeedback(msg.id, { action: targetAction });
+    msg.feedback = targetAction;
+    uni.showToast({ title: '已记录评价', icon: 'none' });
+  } catch (e) {
+    console.error('提交反馈失败:', e);
+  }
+};
+
+const doStream = (requestFunc, requestData, aiMsgIndex) => {
+  isGenerating.value = true;
+  
+  // 确保界面已拉到底
+  scrollToBottom();
+
+  currentStreamTask = requestFunc(requestData, {
+    onMeta: (meta) => {
+      // 第一时间拿到 session_id 或 message_id 填补上去
+      if (meta.session_id) currentSessionId.value = meta.session_id;
+      if (meta.message_id && messages.value[aiMsgIndex]) {
+         messages.value[aiMsgIndex].id = meta.message_id;
+      }
+    },
+    onTitle: (titleObj) => {
+      if (titleObj.title && currentSessionId.value) {
+        // 更新历史标题列表（可以简单地从头 load 或者直接找）
+        const temp = historyList.value.find(s => s.id === currentSessionId.value);
+        if (temp) {
+          temp.title = titleObj.title;
+        } else {
+          // 如果是一条新记录
+          historyList.value.unshift({ id: currentSessionId.value, title: titleObj.title });
+        }
+      }
+    },
+    onMessage: (msgData) => {
+      if (messages.value[aiMsgIndex]) {
+        messages.value[aiMsgIndex].content += msgData.content;
+        scrollToBottom();
+      }
+    },
+    onDone: () => {
+      if (messages.value[aiMsgIndex]) messages.value[aiMsgIndex].typing = false;
+      isGenerating.value = false;
+      currentStreamTask = null;
+      loadHistory(); // 刷新一遍侧边栏时间或标题
+    },
+    onError: (err) => {
+      console.error("生成出错：", err);
+      if (messages.value[aiMsgIndex]) messages.value[aiMsgIndex].typing = false;
+      isGenerating.value = false;
+      currentStreamTask = null;
+      uni.showToast({ title: '生成失败', icon: 'none' });
+    }
+  });
+};
+
+const sendMessage = () => {
   if (isGenerating.value) return;
   const text = inputText.value.trim();
   if (!text) return;
+
+  if (!uni.getStorageSync('token')) {
+    uni.setStorageSync('pendingMessage', text);
+    uni.navigateTo({ url: '/pages/login/login' });
+    return;
+  }
 
   // 添加用户消息
   messages.value.push({ role: 'user', content: text });
   inputText.value = '';
   scrollToBottom();
 
-  if (!currentSessionId.value) {
-    const newId = Date.now().toString();
-    currentSessionId.value = newId;
-    historyList.value.unshift({
-      id: newId,
-      title: text.length > 15 ? text.substring(0, 15) + '...' : text,
-      timestamp: Date.now(),
-      messages: JSON.parse(JSON.stringify(messages.value))
-    });
-  } else {
-    const session = historyList.value.find(s => s.id === currentSessionId.value);
-    if (session) {
-      session.messages = JSON.parse(JSON.stringify(messages.value));
-      session.timestamp = Date.now();
-    }
-  }
-  saveHistory();
-
-  isGenerating.value = true;
-
-  // 模拟等待，然后添加 AI 消息
-  for(let w=0; w < 20; w++) {
-    if (!isGenerating.value) break;
-    await new Promise(r => setTimeout(r, 30));
-  }
-  
-  if (!isGenerating.value) return;
-  
-  const typingSessionId = currentSessionId.value;
-
+  // 添加空 AI 消息气泡并准备接收
   const aiMsgIndex = messages.value.length;
-  messages.value.push({ role: 'assistant', content: '', typing: true });
-  scrollToBottom();
-
-  // 更新存储以便包含空状态
-  const session = historyList.value.find(s => s.id === currentSessionId.value);
-  if (session) {
-    session.messages = JSON.parse(JSON.stringify(messages.value));
-    saveHistory();
+  messages.value.push({ 
+    role: 'assistant', 
+    content: '', 
+    typing: true,
+    feedback: 'none' 
+  });
+  
+  const requestData = { query: text };
+  if (currentSessionId.value) {
+    requestData.session_id = currentSessionId.value;
   }
-
-  // 打字机效果包含会话ID进行校验
-  await typeWriter(aiMsgIndex, MOCK_ANSWER, typingSessionId);
+  
+  doStream(streamChatCompletion, requestData, aiMsgIndex);
 };
 
 const regenerate = async (idx) => {
   if (isGenerating.value) return;
+  if (!currentSessionId.value) return; // 容错判断，理论上必定存在
+
+  // 清空文本
   messages.value[idx].content = '';
   messages.value[idx].typing = true;
-  await typeWriter(idx, MOCK_ANSWER, currentSessionId.value);
+  messages.value[idx].feedback = 'none';
+
+  doStream(streamRegenerate, { session_id: currentSessionId.value }, idx);
 };
 
 /* ---- 接收首页传来的 query ---- */
@@ -314,7 +372,11 @@ onMounted(async () => {
     windowWidth.value = res.size.windowWidth;
   });
 
-  loadHistory();
+  loadUserInfo();
+
+  if (uni.getStorageSync('token')) {
+    loadHistory();
+  }
 
   // 读取页面传参（ query 或 sessionId ）
   const pages = getCurrentPages();
@@ -322,22 +384,29 @@ onMounted(async () => {
   const options = currentPage?.$page?.options ?? currentPage?.options ?? {};
   
   if (options.sessionId) {
-    // 点击侧边栏历史记录跳转进来的
     switchSession(options.sessionId);
   } else if (options.query) {
-    // 从首页发起的新 query
     inputText.value = options.query;
-    
-    // 模拟：创建一条新对话记录，然后高亮
-    const newId = Date.now().toString();
-    currentSessionId.value = newId;
-    historyList.value.unshift({
-      id: newId,
-      title: options.query.slice(0, 15) + '...' // 自动生成标题
-    });
-
     await nextTick();
     sendMessage();
+  }
+});
+
+onShow(async () => {
+  loadUserInfo();
+  if (uni.getStorageSync('token')) {
+    loadHistory();
+    const pendingMessage = uni.getStorageSync('pendingMessage');
+    if (pendingMessage) {
+      uni.removeStorageSync('pendingMessage');
+      inputText.value = pendingMessage;
+      await nextTick();
+      sendMessage();
+    }
+  } else {
+    historyList.value = [];
+    messages.value = [];
+    currentSessionId.value = null;
   }
 });
 

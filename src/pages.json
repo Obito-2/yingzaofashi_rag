@@ -13,6 +13,13 @@
 				"navigationBarTitleText": "传统建筑营造百科",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/login/login",
+			"style": {
+				"navigationBarTitleText": "登录与注册",
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	"globalStyle": {
